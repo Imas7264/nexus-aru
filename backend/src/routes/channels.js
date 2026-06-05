@@ -158,4 +158,31 @@ router.patch('/:id/requests/:requestId', authMiddleware, async (req, res) => {
   }
 })
 
+router.delete('/:id/requests/:requestId', authMiddleware, async (req, res) => {
+  const { id, requestId } = req.params
+
+  try {
+    const request = await prisma.request.findUnique({
+      where: { id: parseInt(requestId) }
+    })
+
+    if (!request) {
+      return res.status(404).json({ error: 'Request not found' })
+    }
+
+    if (request.createdById !== req.user.id && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'You can only delete your own requests' })
+    }
+
+    await prisma.request.delete({
+      where: { id: parseInt(requestId) }
+    })
+
+    res.json({ message: 'Request deleted successfully' })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Something went wrong' })
+  }
+})
+
 module.exports = router
