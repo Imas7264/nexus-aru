@@ -1,6 +1,8 @@
 const express = require('express')
 const cors = require('cors')
 const authRoutes = require('./routes/auth')
+const announcementRoutes = require('./routes/announcements')
+const channelRoutes = require('./routes/channels')
 
 const app = express()
 
@@ -12,6 +14,8 @@ app.get('/', (req, res) => {
 })
 
 app.use('/auth', authRoutes)
+app.use('/announcements', announcementRoutes)
+app.use('/channels', channelRoutes)
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
