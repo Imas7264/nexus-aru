@@ -22,9 +22,9 @@ services:
       DATABASE_URL: postgresql://nexus:nexus123@db:5432/nexusdb
     depends_on:
       - db
-    # volumes:
-    #   - ./backend:/app
-    #   - /app/node_modules
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
 
   frontend:
     build: ./frontend
@@ -34,9 +34,9 @@ services:
       - "5173:5173"
     depends_on:
       - backend
-    # volumes:
-    #   - ./frontend:/app
-    #   - /app/node_modules
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
 
 volumes:
   pgdata:

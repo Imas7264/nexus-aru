@@ -20,6 +20,8 @@ model User {
   tasks         Task[]           // Tasks created by this user
   notes         Note[]
   completions   TaskCompletion[] // Tasks completed by this user
+  announcements Announcement[]   // Announcements created by this user
+  requests      Request[]        // Requests created by this user
 }
 
 enum Role {
@@ -61,11 +63,11 @@ enum NoteCategory {
 model Task {
   id          Int        @id @default(autoincrement())
   title       String
-  description String?    // Added description field
+  description String?
   dueDate     DateTime
   status      TaskStatus @default(PENDING)
   isAdmin     Boolean    @default(false)
-  forBatch    String?    // Which batch (A1, A2, A3) - null means all batches
+  forBatch    String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -75,7 +77,7 @@ model Task {
   createdBy   User @relation(fields: [createdById], references: [id])
   createdById Int
 
-  completions TaskCompletion[] // Track which students completed this task
+  completions TaskCompletion[]
 }
 
 enum TaskStatus {
@@ -83,7 +85,6 @@ enum TaskStatus {
   COMPLETED
 }
 
-// Track which students completed which admin tasks
 model TaskCompletion {
   id          Int      @id @default(autoincrement())
   taskId      Int
@@ -94,4 +95,34 @@ model TaskCompletion {
   user User @relation(fields: [userId], references: [id])
 
   @@unique([taskId, userId])
+}
+
+model Announcement {
+  id          Int      @id @default(autoincrement())
+  content     String
+  type        String   // IMPORTANT or OPTIONAL
+  createdAt   DateTime @default(now())
+  createdById Int
+  createdBy   User     @relation(fields: [createdById], references: [id])
+}
+
+model Channel {
+  id        Int       @id @default(autoincrement())
+  name      String
+  scope     String    // DEPARTMENT, DIVISION, or BATCH
+  createdAt DateTime  @default(now())
+  
+  requests  Request[]
+}
+
+model Request {
+  id          Int       @id @default(autoincrement())
+  content     String
+  status      String    @default("PENDING")
+  createdAt   DateTime  @default(now())
+  channelId   Int
+  createdById Int
+  
+  channel   Channel @relation(fields: [channelId], references: [id])
+  createdBy User    @relation(fields: [createdById], references: [id])
 }
