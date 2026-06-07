@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  moodleId  String   @unique
+  password  String
+  name      String
+  role      Role     @default(STUDENT)
+  division  String
+  batch     String
+  createdAt DateTime @default(now())
+
+  tasks         Task[]           // Tasks created by this user
+  notes         Note[]
+  completions   TaskCompletion[] // Tasks completed by this user
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+model Subject {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+
+  notes Note[]
+  tasks Task[]
+}
+
+model Note {
+  id            Int          @id @default(autoincrement())
+  title         String
+  description   String?
+  fileName      String
+  fileSize      Float
+  category      NoteCategory
+  downloadCount Int          @default(0)
+  uploadedAt    DateTime     @default(now())
+
+  subject      Subject @relation(fields: [subjectId], references: [id])
+  subjectId    Int
+
+  uploadedBy   User @relation(fields: [uploadedById], references: [id])
+  uploadedById Int
+}
+
+enum NoteCategory {
+  ASSIGNMENT
+  EXPERIMENT
+  CLASS_NOTES
+}
+
+model Task {
+  id          Int        @id @default(autoincrement())
+  title       String
+  description String?    // Added description field
+  dueDate     DateTime
+  status      TaskStatus @default(PENDING)
+  isAdmin     Boolean    @default(false)
+  forBatch    String?    // Which batch (A1, A2, A3) - null means all batches
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  subject   Subject @relation(fields: [subjectId], references: [id])
+  subjectId Int
+
+  createdBy   User @relation(fields: [createdById], references: [id])
+  createdById Int
+
+  completions TaskCompletion[] // Track which students completed this task
+}
+
+enum TaskStatus {
+  PENDING
+  COMPLETED
+}
+
+// Track which students completed which admin tasks
+model TaskCompletion {
+  id          Int      @id @default(autoincrement())
+  taskId      Int
+  userId      Int
+  completedAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([taskId, userId])
+}
