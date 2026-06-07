@@ -2,6 +2,7 @@ const express = require('express')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const prisma = require('../prisma')
+const authMiddleware = require('../middleware/auth')
 
 const router = express.Router()
 const JWT_SECRET = process.env.JWT_SECRET || 'nexus-secret-key'

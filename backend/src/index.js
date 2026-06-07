@@ -3,6 +3,8 @@ const cors = require('cors')
 const authRoutes = require('./routes/auth')
 const announcementRoutes = require('./routes/announcements')
 const channelRoutes = require('./routes/channels')
+const notesRoutes = require('./routes/notes') 
+const tasksRoutes = require('./routes/tasks')
 
 const app = express()
 
@@ -16,6 +18,8 @@ app.get('/', (req, res) => {
 app.use('/auth', authRoutes)
 app.use('/announcements', announcementRoutes)
 app.use('/channels', channelRoutes)
+app.use('/notes', notesRoutes)
+app.use('/tasks', tasksRoutes)
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {

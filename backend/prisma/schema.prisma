@@ -7,18 +7,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id         Int      @id @default(autoincrement())
-  moodleId   String   @unique
-  password   String
-  name       String
-  role       Role     @default(STUDENT)
-  division   String
-  batch      String
-  createdAt  DateTime @default(now())
+// ─────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────
 
-  files         File[]
+model User {
+  id        Int      @id @default(autoincrement())
+  moodleId  String   @unique
+  password  String
+  name      String
+  role      Role     @default(STUDENT)
+  division  String
+  batch     String
+  createdAt DateTime @default(now())
+
+  // Notes & Tasks codebase
+  notes         Note[]
+  completions   TaskCompletion[]
+
+  // Shared
   tasks         Task[]
+
+  // Requests & Announcements codebase
   announcements Announcement[]
   requests      Request[]
 }
@@ -28,55 +38,94 @@ enum Role {
   ADMIN
 }
 
-model Subject {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
+// ─────────────────────────────────────────
+// SUBJECT
+// ─────────────────────────────────────────
 
-  files File[]
+model Subject {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  notes Note[]
   tasks Task[]
 }
 
-model File {
-  id          Int          @id @default(autoincrement())
-  name        String
-  size        Float
-  description String?
-  category    FileCategory
-  uploadedAt  DateTime     @default(now())
+// ─────────────────────────────────────────
+// NOTE (from notes/tasks codebase)
+// Kept as Note with NoteCategory since that
+// codebase uses it — File model was the
+// equivalent in the other repo
+// ─────────────────────────────────────────
 
-  subject   Subject @relation(fields: [subjectId], references: [id])
-  subjectId Int
+model Note {
+  id            Int          @id @default(autoincrement())
+  title         String
+  description   String?
+  fileName      String
+  fileSize      Float
+  category      NoteCategory
+  downloadCount Int          @default(0)
+  uploadedAt    DateTime     @default(now())
+
+  subject      Subject @relation(fields: [subjectId], references: [id])
+  subjectId    Int
 
   uploadedBy   User @relation(fields: [uploadedById], references: [id])
   uploadedById Int
 }
 
-enum FileCategory {
-  ASSIGNMENTS
-  EXPERIMENTS
-  NOTES
-  OTHER
+enum NoteCategory {
+  ASSIGNMENT
+  EXPERIMENT
+  CLASS_NOTES
 }
 
+// ─────────────────────────────────────────
+// TASK (merged — kept richer version from
+// notes/tasks codebase, added forBatch,
+// description, updatedAt, and completions)
+// ─────────────────────────────────────────
+
 model Task {
-  id        Int        @id @default(autoincrement())
-  name      String
-  dueDate   DateTime
-  status    TaskStatus @default(PENDING)
-  isAdmin   Boolean    @default(false)
-  createdAt DateTime   @default(now())
+  id          Int        @id @default(autoincrement())
+  title       String
+  description String?
+  dueDate     DateTime
+  status      TaskStatus @default(PENDING)
+  isAdmin     Boolean    @default(false)
+  forBatch    String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   subject   Subject @relation(fields: [subjectId], references: [id])
   subjectId Int
 
-  user   User @relation(fields: [userId], references: [id])
-  userId Int
+  createdBy   User @relation(fields: [createdById], references: [id])
+  createdById Int
+
+  completions TaskCompletion[]
 }
 
 enum TaskStatus {
   PENDING
   COMPLETED
 }
+
+model TaskCompletion {
+  id          Int      @id @default(autoincrement())
+  taskId      Int
+  userId      Int
+  completedAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([taskId, userId])
+}
+
+// ─────────────────────────────────────────
+// ANNOUNCEMENT (from requests/announcements codebase)
+// ─────────────────────────────────────────
 
 model Announcement {
   id        Int              @id @default(autoincrement())
@@ -93,9 +142,13 @@ enum AnnouncementType {
   OPTIONAL
 }
 
+// ─────────────────────────────────────────
+// CHANNEL + REQUEST (from requests/announcements codebase)
+// ─────────────────────────────────────────
+
 model Channel {
-  id    Int         @id @default(autoincrement())
-  name  String      @unique
+  id    Int          @id @default(autoincrement())
+  name  String       @unique
   scope ChannelScope
 
   requests Request[]
