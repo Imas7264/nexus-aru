@@ -22,9 +22,38 @@ function Channels() {
   async function fetchChannels() {
     try {
       const res = await api.get('/channels')
-      setChannels(res.data)
-      if (res.data.length > 0) setSelectedChannel(res.data[0])
+      let all = res.data
+
+      // If no channels exist yet, seed the 3 defaults for this user's scope
+      if (all.length === 0 && user.role === 'ADMIN') {
+        await seedDefaultChannels()
+        const seeded = await api.get('/channels')
+        all = seeded.data
+      }
+
+      // Filter: only show channels relevant to the current user's scope
+      const visible = all.filter(c => {
+        if (c.scope === 'DEPARTMENT') return c.name === user.department
+        if (c.scope === 'DIVISION')   return c.name === user.division
+        if (c.scope === 'BATCH')      return c.name === user.batch
+        return true // fallback: show anything unscoped
+      })
+
+      setChannels(visible)
+      if (visible.length > 0) setSelectedChannel(visible[0])
     } catch (err) { console.error(err) }
+  }
+
+  async function seedDefaultChannels() {
+    const defaults = [
+      { name: user.division,   scope: 'DIVISION'   },
+      { name: user.batch,      scope: 'BATCH'       },
+      { name: user.department, scope: 'DEPARTMENT'  },
+    ]
+    for (const ch of defaults) {
+      if (!ch.name) continue
+      try { await api.post('/channels', ch) } catch (_) {}
+    }
   }
 
   async function fetchRequests(channelId) {

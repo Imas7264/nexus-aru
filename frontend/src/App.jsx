@@ -33,7 +33,7 @@ function App() {
               <Tasks />
             </ProtectedRoute>
           } />
-          <Route path="/" element={<Navigate to="/announcements" />} />
+          <Route path="/" element={<Navigate to="/channels" />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

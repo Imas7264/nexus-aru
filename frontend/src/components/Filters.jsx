@@ -23,10 +23,11 @@ function Filters({ subjects, filterSubject, setFilterSubject, filterCategory, se
           onChange={e => setFilterCategory(e.target.value)}
           className="flex-1 text-sm text-gray-500 focus:outline-none bg-transparent border-b border-gray-200 py-2"
         >
-          <option value="">All Categories</option>
-          <option value="CLASS_NOTES">Class Notes</option>
+          {/* <option value="">All Categories</option> */}
           <option value="ASSIGNMENT">Assignment</option>
           <option value="EXPERIMENT">Experiment</option>
+          <option value="NOTES">Notes</option>
+          <option value="OTHER">Other</option>
         </select>
         <button
           type="submit"

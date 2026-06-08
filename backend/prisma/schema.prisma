@@ -57,7 +57,8 @@ model Note {
 enum NoteCategory {
   ASSIGNMENT
   EXPERIMENT
-  CLASS_NOTES
+  NOTES
+  OTHER
 }
 
 model Task {
