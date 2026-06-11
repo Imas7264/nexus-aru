@@ -16,6 +16,7 @@ function Layout({ children }) {
     { label: 'Channels', path: '/channels' },
     { label: 'Notes', path: '/notes' },
     { label: 'Tasks', path: '/tasks' },
+    ...(user.role === 'ADMIN' ? [{ label: 'Manage', path: '/manage' }] : []),
   ]
 
   return (

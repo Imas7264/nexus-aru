@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
 
-const DEPARTMENTS = ['CS', 'IT', 'AIML', 'Mechanical', 'Civil']
+const DEPARTMENTS = ['Computer Engineering', 'Information Technology', 'AIML', 'Mechanical', 'Civil']
 const DIVISIONS = ['A', 'B', 'C']
-const BATCHES = ['1', '2', '3']
+const BATCH_NUMBERS = [1, 2, 3]
 
 function Login() {
   const [mode, setMode] = useState('login')
@@ -24,6 +24,7 @@ function Login() {
   const [regDepartment, setRegDepartment] = useState('')
   const [regDivision, setRegDivision] = useState('')
   const [regBatch, setRegBatch] = useState('')
+  const batchLabel = regDivision && regBatch ? `${regDivision}${regBatch}` : ''
 
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -54,7 +55,7 @@ function Login() {
         password: regPassword,
         department: regDepartment,
         division: regDivision,
-        batch: regBatch,
+        batch: batchLabel,
       })
       setMessage('Account created! You can now sign in.')
       setRegName(''); setRegMoodleId(''); setRegPassword(''); setRegConfirm('')
@@ -147,9 +148,9 @@ function Login() {
               </div>
               <div className="flex-1">
                 <label className={labelClass}>Batch</label>
-                <select value={regBatch} onChange={e => setRegBatch(e.target.value)} required className={selectClass}>
+                <select value={regBatch} onChange={e => setRegBatch(parseInt(e.target.value))} required className={selectClass}>
                   <option value="">Batch</option>
-                  {BATCHES.map(b => <option key={b} value={b}>{b}</option>)}
+                  {BATCH_NUMBERS.map(b => <option key={b} value={b}>{b}</option>)}
                 </select>
               </div>
             </div>

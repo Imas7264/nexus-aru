@@ -6,6 +6,7 @@ import Announcements from './pages/Announcements'
 import Channels from './pages/Channels'
 import Notes from './pages/Notes'
 import Tasks from './pages/Tasks'
+import Manage from './pages/Manage'
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/" element={<Navigate to="/channels" />} />
+          <Route path="/manage" element={<Manage />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

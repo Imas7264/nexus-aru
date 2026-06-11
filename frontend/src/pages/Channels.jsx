@@ -9,9 +9,13 @@ function Channels() {
   const [selectedChannel, setSelectedChannel] = useState(null)
   const [requests, setRequests] = useState([])
   const [newRequest, setNewRequest] = useState('')
-  const [newChannelName, setNewChannelName] = useState('')
-  const [newChannelScope, setNewChannelScope] = useState('DEPARTMENT')
   const [error, setError] = useState('')
+
+  const defaultChannels = [
+    { scope: 'DIVISION',   name: user.division },
+    { scope: 'BATCH',      name: String(user.batch) },
+    { scope: 'DEPARTMENT', name: user.department },
+  ]
 
   useEffect(() => { fetchChannels() }, [])
 
@@ -24,36 +28,33 @@ function Channels() {
       const res = await api.get('/channels')
       let all = res.data
 
-      // If no channels exist yet, seed the 3 defaults for this user's scope
-      if (all.length === 0 && user.role === 'ADMIN') {
-        await seedDefaultChannels()
-        const seeded = await api.get('/channels')
-        all = seeded.data
+      // Seed any of the 3 defaults that don't exist yet
+      for (const ch of defaultChannels) {
+        if (!ch.name) continue
+        const exists = all.find(c => c.name === ch.name && c.scope === ch.scope)
+        if (!exists) {
+          try { await api.post('/channels', ch) } catch (_) {}
+        }
       }
 
-      // Filter: only show channels relevant to the current user's scope
-      const visible = all.filter(c => {
-        if (c.scope === 'DEPARTMENT') return c.name === user.department
-        if (c.scope === 'DIVISION')   return c.name === user.division
-        if (c.scope === 'BATCH')      return c.name === user.batch
-        return true // fallback: show anything unscoped
-      })
+      // Re-fetch after potential seeding
+      const seeded = await api.get('/channels')
+      all = seeded.data
+
+      // Only show the 3 channels matching this user's division/batch/department
+      const visible = all.filter(c =>
+        (c.scope === 'DIVISION'   && c.name === user.division) ||
+        (c.scope === 'BATCH'      && c.name === String(user.batch)) ||
+        (c.scope === 'DEPARTMENT' && c.name === user.department)
+      )
+
+      // Fixed order: division → batch → department
+      const order = ['DIVISION', 'BATCH', 'DEPARTMENT']
+      visible.sort((a, b) => order.indexOf(a.scope) - order.indexOf(b.scope))
 
       setChannels(visible)
       if (visible.length > 0) setSelectedChannel(visible[0])
     } catch (err) { console.error(err) }
-  }
-
-  async function seedDefaultChannels() {
-    const defaults = [
-      { name: user.division,   scope: 'DIVISION'   },
-      { name: user.batch,      scope: 'BATCH'       },
-      { name: user.department, scope: 'DEPARTMENT'  },
-    ]
-    for (const ch of defaults) {
-      if (!ch.name) continue
-      try { await api.post('/channels', ch) } catch (_) {}
-    }
   }
 
   async function fetchRequests(channelId) {
@@ -93,47 +94,10 @@ function Channels() {
     }
   }
 
-  async function handleCreateChannel(e) {
-    e.preventDefault()
-    setError('')
-    try {
-      await api.post('/channels', { name: newChannelName, scope: newChannelScope })
-      setNewChannelName('')
-      fetchChannels()
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to create channel')
-    }
-  }
-
   return (
     <Layout>
       <div className="max-w-4xl mx-auto">
         <h1 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-8">Request Channels</h1>
-
-        {user.role === 'ADMIN' && (
-          <form onSubmit={handleCreateChannel} className="flex gap-3 items-center mb-12 pb-8 border-b border-gray-100">
-            <input
-              type="text"
-              placeholder="New channel name"
-              value={newChannelName}
-              onChange={e => setNewChannelName(e.target.value)}
-              required
-              className="flex-1 border-b border-gray-200 py-2 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 transition-colors bg-transparent"
-            />
-            <select
-              value={newChannelScope}
-              onChange={e => setNewChannelScope(e.target.value)}
-              className="text-sm text-gray-500 focus:outline-none bg-transparent border-b border-gray-200 py-2 pr-2"
-            >
-              <option value="DEPARTMENT">Department</option>
-              <option value="DIVISION">Division</option>
-              <option value="BATCH">Batch</option>
-            </select>
-            <button type="submit" className="bg-gray-900 hover:bg-gray-700 text-white text-xs font-medium px-4 py-2 transition-colors">
-              Create
-            </button>
-          </form>
-        )}
 
         {error && <p className="text-red-500 text-xs mb-4">{error}</p>}
 

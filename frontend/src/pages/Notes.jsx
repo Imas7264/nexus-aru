@@ -19,7 +19,6 @@ function Notes() {
   const [newTitle, setNewTitle] = useState('')
   const [newDescription, setNewDescription] = useState('')
   const [newFile, setNewFile] = useState(null)
-  const [newSubjectName, setNewSubjectName] = useState('')
   const [showUploadForm, setShowUploadForm] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [downloadingId, setDownloadingId] = useState(null)
@@ -107,46 +106,15 @@ function Notes() {
     }
   }
 
-  async function handleCreateSubject(e) {
-    e.preventDefault()
-    setError('')
-    try {
-      await api.post('/notes/subjects', { name: newSubjectName })
-      setNewSubjectName('')
-      fetchSubjects()
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to create subject')
-    }
-  }
-
   return (
     <Layout>
       <div className="max-w-4xl mx-auto">
         <h1 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-8">Notes Exchange</h1>
 
-        {/* Admin: create subject */}
-        {user.role === 'ADMIN' && (
-          <form onSubmit={handleCreateSubject} className="flex gap-3 items-center mb-12 pb-8 border-b border-gray-100">
-            <input
-              type="text"
-              placeholder="New subject name"
-              value={newSubjectName}
-              onChange={e => setNewSubjectName(e.target.value)}
-              required
-              className="flex-1 border-b border-gray-200 py-2 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 transition-colors bg-transparent"
-            />
-            <button type="submit" className="bg-gray-900 hover:bg-gray-700 text-white text-xs font-medium px-4 py-2 transition-colors">
-              Create Subject
-            </button>
-          </form>
-        )}
-
         {error && <p className="text-red-500 text-xs mb-4">{error}</p>}
         {message && <p className="text-green-600 text-xs mb-4">{message}</p>}
 
         <div className="flex gap-12">
-
-          {/* Left: subjects list */}
           <div className="w-40 flex-shrink-0">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Subjects</p>
             {subjects.length === 0 && <p className="text-gray-300 text-sm">No subjects yet</p>}
@@ -165,11 +133,9 @@ function Notes() {
             ))}
           </div>
 
-          {/* Right: content */}
           <div className="flex-1">
             {selectedSubject ? (
               <>
-                {/* Subject name + category tabs */}
                 <div className="flex items-center gap-3 mb-6">
                   <h2 className="text-sm font-semibold text-gray-900">{selectedSubject.name}</h2>
                 </div>
@@ -190,7 +156,6 @@ function Notes() {
                   ))}
                 </div>
 
-                {/* Upload toggle + form */}
                 <div className="flex justify-end mb-4">
                   <button
                     onClick={() => setShowUploadForm(!showUploadForm)}
@@ -235,7 +200,6 @@ function Notes() {
                   </form>
                 )}
 
-                {/* Notes list */}
                 {notes.length === 0 && <p className="text-gray-300 text-sm">No materials found.</p>}
                 {notes.map(note => (
                   <div key={note.id} className="mb-6 pb-6 border-b border-gray-100 last:border-0">

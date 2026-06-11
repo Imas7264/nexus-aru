@@ -363,4 +363,24 @@ router.get('/my-tasks', authMiddleware, async (req, res) => {
   }
 })
 
+// Get all distinct batches for admin's division (for task creation dropdown)
+router.get('/batches', authMiddleware, async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        role: 'STUDENT',
+        batch: { not: null },
+        ...(req.user.division ? { batch: { startsWith: req.user.division } } : {})
+      },
+      select: { batch: true },
+      distinct: ['batch']
+    })
+    const batches = users.map(u => u.batch).filter(Boolean).sort()
+    res.json(batches)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Failed to fetch batches' })
+  }
+})
+
 module.exports = router

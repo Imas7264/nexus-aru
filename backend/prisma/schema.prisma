@@ -8,14 +8,15 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  moodleId  String   @unique
-  password  String
-  name      String
-  role      Role     @default(STUDENT)
-  division  String
-  batch     String
-  createdAt DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  moodleId   String   @unique
+  password   String
+  name       String
+  role       Role     @default(STUDENT)
+  department String
+  division   String
+  batch      String
+  createdAt  DateTime @default(now())
 
   tasks         Task[]           // Tasks created by this user
   notes         Note[]
@@ -110,10 +111,12 @@ model Announcement {
 model Channel {
   id        Int       @id @default(autoincrement())
   name      String
-  scope     String    // DEPARTMENT, DIVISION, or BATCH
+  scope     String
   createdAt DateTime  @default(now())
-  
+
   requests  Request[]
+
+  @@unique([name, scope])  // add this line
 }
 
 model Request {

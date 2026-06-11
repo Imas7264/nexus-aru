@@ -14,6 +14,7 @@ async function main() {
       password: hashedPassword,
       name: 'Sami Ansari',
       role: 'ADMIN',
+      department: 'AIML',
       division: 'A',
       batch: 'A1',
     },

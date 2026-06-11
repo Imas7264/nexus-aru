@@ -19,11 +19,11 @@ function Tasks() {
 
   // Admin task form
   const [showAdminForm, setShowAdminForm] = useState(false)
-  const [newTask, setNewTask] = useState({ title: '', description: '', dueDate: '', subjectId: '', forBatch: '' })
+  const [newTask, setNewTask] = useState({ title: '', description: '', dueDate: '', forBatch: '' })
 
   // Personal task form
   const [showPersonalForm, setShowPersonalForm] = useState(false)
-  const [newPersonalTask, setNewPersonalTask] = useState({ title: '', description: '', dueDate: '', subjectId: '' })
+  const [newPersonalTask, setNewPersonalTask] = useState({ title: '', description: '', dueDate: '' })
 
   // Edit personal task
   const [editingTask, setEditingTask] = useState(null)
@@ -31,15 +31,23 @@ function Tasks() {
   // Stats
   const [taskStats, setTaskStats] = useState(null)
   const [statsForId, setStatsForId] = useState(null)
+  const [batches, setBatches] = useState([])
 
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
 
-  useEffect(() => { fetchSubjects() }, [])
+  useEffect(() => { fetchSubjects(); fetchBatches() }, [])
 
   useEffect(() => {
     if (selectedSubject) fetchTasks()
   }, [selectedSubject])
+
+  async function fetchBatches() {
+    try {
+      const res = await api.get('/tasks/batches')
+      setBatches(res.data)
+    } catch (err) { console.error(err) }
+  }
 
   async function fetchSubjects() {
     try {
@@ -59,7 +67,7 @@ function Tasks() {
     setLoading(false)
   }
 
-  function showMsg(msg, type = 'success') {
+  function showMsg(msg) {
     setMessage(msg)
     setTimeout(() => setMessage(''), 3000)
   }
@@ -78,14 +86,33 @@ function Tasks() {
   const filteredAdmin = adminTasks.filter(t => t.subject?.id === selectedSubject?.id)
   const filteredPersonal = personalTasks.filter(t => t.subject?.id === selectedSubject?.id)
 
+  // Group admin tasks by forBatch (null = "All Batches")
+  const groupedAdmin = filteredAdmin.reduce((acc, task) => {
+    const key = task.forBatch || 'All Batches'
+    if (!acc[key]) acc[key] = []
+    acc[key].push(task)
+    return acc
+  }, {})
+
+  // Sort groups: "All Batches" first, then alphabetically
+  const sortedGroups = Object.keys(groupedAdmin).sort((a, b) => {
+    if (a === 'All Batches') return -1
+    if (b === 'All Batches') return 1
+    return a.localeCompare(b)
+  })
+
   async function handleCreateAdminTask(e) {
     e.preventDefault()
     setError('')
     try {
-      await api.post('/tasks/admin', { ...newTask, subjectId: selectedSubject.id })
+      await api.post('/tasks/admin', {
+        ...newTask,
+        subjectId: selectedSubject.id,
+        forBatch: newTask.forBatch || null
+      })
       showMsg('Task created!')
       setShowAdminForm(false)
-      setNewTask({ title: '', description: '', dueDate: '', subjectId: '', forBatch: '' })
+      setNewTask({ title: '', description: '', dueDate: '', forBatch: '' })
       fetchTasks()
     } catch (err) { setError(err.response?.data?.error || 'Failed to create task') }
   }
@@ -97,7 +124,7 @@ function Tasks() {
       await api.post('/tasks/personal', { ...newPersonalTask, subjectId: selectedSubject.id })
       showMsg('Task created!')
       setShowPersonalForm(false)
-      setNewPersonalTask({ title: '', description: '', dueDate: '', subjectId: '' })
+      setNewPersonalTask({ title: '', description: '', dueDate: '' })
       fetchTasks()
     } catch (err) { setError(err.response?.data?.error || 'Failed to create task') }
   }
@@ -128,6 +155,14 @@ function Tasks() {
     } catch (err) { setError(err.response?.data?.error || 'Failed') }
   }
 
+  async function handleDeleteAdminTask(taskId) {
+    if (!confirm('Delete this task for everyone?')) return
+    try {
+      await api.delete(`/tasks/admin/${taskId}`)
+      fetchTasks()
+    } catch (err) { setError(err.response?.data?.error || 'Delete failed') }
+  }
+
   async function viewStats(taskId) {
     try {
       const res = await api.get(`/tasks/admin/stats/${taskId}`)
@@ -137,6 +172,80 @@ function Tasks() {
   }
 
   const inputClass = "w-full border-b border-gray-200 py-2 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 transition-colors bg-transparent"
+
+  const TaskRow = ({ task, isAdmin }) => (
+    <div className="mb-6 pb-6 border-b border-gray-100 last:border-0">
+      <p className={`text-sm leading-relaxed mb-2 ${
+        (isAdmin ? task.isCompleted : task.status === 'COMPLETED')
+          ? 'line-through text-gray-400'
+          : 'text-gray-800'
+      }`}>
+        {task.title}
+      </p>
+      {task.description && <p className="text-xs text-gray-500 mb-2">{task.description}</p>}
+
+      {/* Stats panel */}
+      {isAdmin && statsForId === task.id && taskStats && (
+        <div className="flex gap-8 mb-3">
+          <span className="text-xs text-gray-400">Total <span className="text-gray-900 font-medium">{taskStats.totalStudents}</span></span>
+          <span className="text-xs text-gray-400">Completed <span className="text-gray-900 font-medium">{taskStats.completedCount}</span></span>
+          <span className="text-xs text-gray-400">Pending <span className="text-gray-900 font-medium">{taskStats.pendingCount}</span></span>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-gray-400">
+          Due {new Date(task.dueDate).toLocaleString()}
+        </span>
+        <div className="flex items-center gap-4">
+          <span className={`text-xs font-medium ${
+            (isAdmin ? task.isCompleted : task.status === 'COMPLETED')
+              ? 'text-gray-900' : 'text-gray-400'
+          }`}>
+            {(isAdmin ? task.isCompleted : task.status === 'COMPLETED') ? 'Completed' : 'Pending'}
+          </span>
+          <button
+            onClick={() => toggleComplete(task.id, isAdmin, isAdmin ? task.isCompleted : task.status === 'COMPLETED')}
+            className="text-xs text-gray-400 hover:text-gray-900 transition-colors underline"
+          >
+            {(isAdmin ? task.isCompleted : task.status === 'COMPLETED') ? 'Mark pending' : 'Mark completed'}
+          </button>
+          {!isAdmin && (
+            <>
+              <button
+                onClick={() => { setEditingTask(task); setShowPersonalForm(false) }}
+                className="text-xs text-gray-400 hover:text-gray-900 transition-colors"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => handleDeletePersonalTask(task.id)}
+                className="text-xs text-gray-300 hover:text-red-400 transition-colors"
+              >
+                Delete
+              </button>
+            </>
+          )}
+          {isAdmin && user.role === 'ADMIN' && (
+            <>
+              <button
+                onClick={() => statsForId === task.id ? setStatsForId(null) : viewStats(task.id)}
+                className="text-xs text-gray-300 hover:text-gray-900 transition-colors"
+              >
+                {statsForId === task.id ? 'Hide stats' : 'Stats'}
+              </button>
+              <button
+                onClick={() => handleDeleteAdminTask(task.id)}
+                className="text-xs text-gray-300 hover:text-red-400 transition-colors"
+              >
+                Delete
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <Layout>
@@ -171,7 +280,6 @@ function Tasks() {
           <div className="flex-1">
             {selectedSubject ? (
               <>
-                {/* Subject heading */}
                 <div className="flex items-center gap-3 mb-6">
                   <h2 className="text-sm font-semibold text-gray-900">{selectedSubject.name}</h2>
                 </div>
@@ -193,7 +301,7 @@ function Tasks() {
                   ))}
                 </div>
 
-                {/* ── Admin Tasks tab ── */}
+                {/* ── Admin Tasks ── */}
                 {activeTab === 'admin' && (
                   <>
                     {user.role === 'ADMIN' && (
@@ -213,11 +321,15 @@ function Tasks() {
                           <input type="text" placeholder="Title" value={newTask.title} onChange={e => setNewTask({...newTask, title: e.target.value})} required className={inputClass} />
                           <input type="text" placeholder="Description (optional)" value={newTask.description} onChange={e => setNewTask({...newTask, description: e.target.value})} className={inputClass} />
                           <input type="datetime-local" value={newTask.dueDate} onChange={e => setNewTask({...newTask, dueDate: e.target.value})} required className={inputClass} />
-                          <select value={newTask.forBatch} onChange={e => setNewTask({...newTask, forBatch: e.target.value})} className={inputClass}>
+                          <select
+                            value={newTask.forBatch}
+                            onChange={e => setNewTask({...newTask, forBatch: e.target.value})}
+                            className={inputClass}
+                          >
                             <option value="">All Batches</option>
-                            <option value="A1">Batch A1</option>
-                            <option value="A2">Batch A2</option>
-                            <option value="A3">Batch A3</option>
+                            {batches.map(b => (
+                              <option key={b} value={b}>{b}</option>
+                            ))}
                           </select>
                         </div>
                         <button type="submit" className="bg-gray-900 hover:bg-gray-700 text-white text-xs font-medium px-4 py-2 transition-colors self-end">
@@ -226,61 +338,26 @@ function Tasks() {
                       </form>
                     )}
 
-                    {/* Stats panel */}
-                    {statsForId && taskStats && (
-                      <div className="mb-6 pb-6 border-b border-gray-100">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Completion Stats</p>
-                        <div className="flex gap-8">
-                          <span className="text-xs text-gray-400">Total students <span className="text-gray-900 font-medium">{taskStats.totalStudents}</span></span>
-                          <span className="text-xs text-gray-400">Completed <span className="text-gray-900 font-medium">{taskStats.completedCount}</span></span>
-                          <span className="text-xs text-gray-400">Pending <span className="text-gray-900 font-medium">{taskStats.pendingCount}</span></span>
-                        </div>
-                      </div>
-                    )}
-
                     {loading ? (
                       <p className="text-gray-400 text-sm">Loading...</p>
                     ) : filteredAdmin.length === 0 ? (
                       <p className="text-gray-300 text-sm">No admin tasks for this subject.</p>
                     ) : (
-                      filteredAdmin.map(task => (
-                        <div key={task.id} className="mb-6 pb-6 border-b border-gray-100 last:border-0">
-                          <p className={`text-sm leading-relaxed mb-2 ${task.isCompleted ? 'line-through text-gray-400' : 'text-gray-800'}`}>
-                            {task.title}
+                      sortedGroups.map(group => (
+                        <div key={group} className="mb-8">
+                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
+                            {group}
                           </p>
-                          {task.description && <p className="text-xs text-gray-500 mb-2">{task.description}</p>}
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-400">
-                              Due {new Date(task.dueDate).toLocaleString()}
-                              {task.forBatch && ` · Batch ${task.forBatch}`}
-                            </span>
-                            <div className="flex items-center gap-4">
-                              <span className={`text-xs font-medium ${task.isCompleted ? 'text-gray-900' : 'text-gray-400'}`}>
-                                {task.isCompleted ? 'Completed' : 'Pending'}
-                              </span>
-                              <button
-                                onClick={() => toggleComplete(task.id, true, task.isCompleted)}
-                                className="text-xs text-gray-400 hover:text-gray-900 transition-colors underline"
-                              >
-                                {task.isCompleted ? 'Mark pending' : 'Mark completed'}
-                              </button>
-                              {user.role === 'ADMIN' && (
-                                <button
-                                  onClick={() => statsForId === task.id ? setStatsForId(null) : viewStats(task.id)}
-                                  className="text-xs text-gray-300 hover:text-gray-900 transition-colors"
-                                >
-                                  {statsForId === task.id ? 'Hide stats' : 'Stats'}
-                                </button>
-                              )}
-                            </div>
-                          </div>
+                          {groupedAdmin[group].map(task => (
+                            <TaskRow key={task.id} task={task} isAdmin={true} />
+                          ))}
                         </div>
                       ))
                     )}
                   </>
                 )}
 
-                {/* ── Personal Tasks tab ── */}
+                {/* ── Personal Tasks ── */}
                 {activeTab === 'personal' && (
                   <>
                     <div className="flex justify-end mb-4">
@@ -325,40 +402,7 @@ function Tasks() {
                       <p className="text-gray-300 text-sm">No personal tasks for this subject.</p>
                     ) : (
                       filteredPersonal.map(task => (
-                        <div key={task.id} className="mb-6 pb-6 border-b border-gray-100 last:border-0">
-                          <p className={`text-sm leading-relaxed mb-2 ${task.status === 'COMPLETED' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
-                            {task.title}
-                          </p>
-                          {task.description && <p className="text-xs text-gray-500 mb-2">{task.description}</p>}
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-400">
-                              Due {new Date(task.dueDate).toLocaleString()}
-                            </span>
-                            <div className="flex items-center gap-4">
-                              <span className={`text-xs font-medium ${task.status === 'COMPLETED' ? 'text-gray-900' : 'text-gray-400'}`}>
-                                {task.status === 'COMPLETED' ? 'Completed' : 'Pending'}
-                              </span>
-                              <button
-                                onClick={() => toggleComplete(task.id, false, task.status === 'COMPLETED')}
-                                className="text-xs text-gray-400 hover:text-gray-900 transition-colors underline"
-                              >
-                                {task.status === 'COMPLETED' ? 'Mark pending' : 'Mark completed'}
-                              </button>
-                              <button
-                                onClick={() => { setEditingTask(task); setShowPersonalForm(false) }}
-                                className="text-xs text-gray-400 hover:text-gray-900 transition-colors"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleDeletePersonalTask(task.id)}
-                                className="text-xs text-gray-300 hover:text-red-400 transition-colors"
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-                        </div>
+                        <TaskRow key={task.id} task={task} isAdmin={false} />
                       ))
                     )}
                   </>
