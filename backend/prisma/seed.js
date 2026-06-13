@@ -17,6 +17,7 @@ async function main() {
       department: 'AIML',
       division: 'A',
       batch: 'A1',
+      isVerified: true,
     },
   })
 

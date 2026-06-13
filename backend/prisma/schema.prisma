@@ -18,6 +18,10 @@ model User {
   batch      String
   createdAt  DateTime @default(now())
 
+  isVerified   Boolean   @default(false)
+  otpCode      String?
+  otpExpiresAt DateTime?
+
   tasks         Task[]           // Tasks created by this user
   notes         Note[]
   completions   TaskCompletion[] // Tasks completed by this user
