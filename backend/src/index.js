@@ -10,6 +10,10 @@ const channelsRoutes = require('./routes/channels')
 const app = express()
 
 app.use(cors())
+app.use(cors({
+  origin: 'https://your-frontend.vercel.app',
+  credentials: true
+}))
 app.use(express.json())
 
 app.get('/', (req, res) => {
