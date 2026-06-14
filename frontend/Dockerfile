@@ -1,11 +1,13 @@
-FROM node:24
-
+FROM node:24 AS builder
 WORKDIR /app
-
 COPY package.json .
 RUN npm install
-
 COPY . .
+RUN npm run build
 
-EXPOSE 5173
-CMD ["npm", "run", "dev"]
+FROM node:24-slim
+WORKDIR /app
+RUN npm install -g serve
+COPY --from=builder /app/dist ./dist
+EXPOSE 3000
+CMD ["serve", "-s", "dist", "-l", "3000"]
